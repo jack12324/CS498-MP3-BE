@@ -4,6 +4,7 @@ import pymysql
 from pymysql.err import OperationalError
 import logging
 from flask_cors import CORS
+import datetime
 
 application = Flask(__name__)
 CORS(application)
@@ -165,10 +166,19 @@ def fetch_data_from_db():
     results = []
     for row in rows:
         record = dict(zip(columns, row))
-        # Convert date objects to ISO strings so they are JSON serializable
+        # Convert date objects to RFC 1123–style strings expected by the frontend,
+        # e.g. "Mon, 25 Aug 2025 00:00:00 GMT"
         date_value = record.get("date")
-        if hasattr(date_value, "isoformat"):
-            record["date"] = date_value.isoformat()
+        if hasattr(date_value, "strftime"):
+            # If it's a date (no time), combine with midnight; if it's already
+            # a datetime, use it directly.
+            if isinstance(date_value, datetime.date) and not isinstance(
+                date_value, datetime.datetime
+            ):
+                dt = datetime.datetime.combine(date_value, datetime.time())
+            else:
+                dt = date_value
+            record["date"] = dt.strftime("%a, %d %b %Y %H:%M:%S GMT")
         # Do not expose the internal auto-incrementing ID in the API response
         record.pop("id", None)
         results.append(record)
