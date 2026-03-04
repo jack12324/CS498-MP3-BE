@@ -52,7 +52,9 @@ def get_data():
     """
     try:
         data = fetch_data_from_db()
-        return jsonify({"data": data}), 200
+        # Return a bare JSON array of events (no wrapping object),
+        # since the frontend expects an array at the top level.
+        return jsonify(data), 200
     except NotImplementedError as nie:
         return jsonify({"error": str(nie)}), 501
     except Exception as e:
