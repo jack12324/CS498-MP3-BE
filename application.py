@@ -112,24 +112,64 @@ def create_db_table():
 
 def insert_data_into_db(payload):
     """
-    Stub for database communication.
-    Implement this function to insert the data into the database.
-    NOTE: Our autograder will automatically insert data into the DB automatically keeping in mind the explained SCHEMA, you dont have to insert your own data.
+    Insert an event into the `events` table using PyMySQL.
+    Expects a payload containing at least `title` and `date`, and may include
+    `description`, `image_url`, and `location`.
     """
+    # Ensure the table exists before attempting to insert
     create_db_table()
-    # TODO: Implement the database call    
-    
-    raise NotImplementedError("Database insert function not implemented.")
+
+    title = payload["title"]
+    date = payload["date"]
+    description = payload.get("description")
+    image_url = payload.get("image_url")
+    location = payload.get("location")
+
+    insert_sql = """
+        INSERT INTO events (title, description, image_url, date, location)
+        VALUES (%s, %s, %s, %s, %s)
+    """
+
+    # Use a context manager so the connection is always closed properly
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                insert_sql,
+                (title, description, image_url, date, location)
+            )
+        connection.commit()
 
 #Database Function Stub
 def fetch_data_from_db():
     """
-    Stub for database communication.
-    Implement this function to fetch your data from the database.
+    Fetch all rows from the `events` table and return them as a list of dicts,
+    ordered by `date` in ascending order.
     """
-    # TODO: Implement the database call
-    
-    raise NotImplementedError("Database fetch function not implemented.")
+    # Ensure the table exists before querying it
+    create_db_table()
+
+    select_sql = """
+        SELECT id, title, description, image_url, date, location
+        FROM events
+        ORDER BY date ASC
+    """
+
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(select_sql)
+            rows = cursor.fetchall()
+
+    columns = ["id", "title", "description", "image_url", "date", "location"]
+    results = []
+    for row in rows:
+        record = dict(zip(columns, row))
+        # Convert date objects to ISO strings so they are JSON serializable
+        date_value = record.get("date")
+        if hasattr(date_value, "isoformat"):
+            record["date"] = date_value.isoformat()
+        results.append(record)
+
+    return results
 
 if __name__ == '__main__':
     application.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
